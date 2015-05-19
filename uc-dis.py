@@ -53,9 +53,9 @@ uinst_descr = [
     Uinst_Descr('1010 0SS1 111U LLLL', '1',   'Move to Extractor Shift Count'),
     Uinst_Descr('1010 1XXX XXXX CCCC', 'var', 'Perform Operation'),
     Uinst_Descr('1011 0SSZ KKKK KKKK', '2',   'Test Segment Type'),
-    Uinst_Descr('1100 AAAA AAAA AAAA', '1',   'Branch (one delay slot)'),
-    Uinst_Descr('1101 AAAA AAAA AAAA', '1',   'Conditional Branch (one delay slot)'),
-    Uinst_Descr('1110 AAAA AAAA AAAA', '1',   'Call Microsubroutine (one delay slot)'),
+    Uinst_Descr('1100 AAAA AAAA AAAA', '1',   'Branch'), # one delay slot
+    Uinst_Descr('1101 AAAA AAAA AAAA', '1',   'Conditional Branch'), # one delay slot
+    Uinst_Descr('1110 AAAA AAAA AAAA', '1',   'Call Microsubroutine'), # one delay slot
     Uinst_Descr('1111 0XX0 0000 XXXX', '1',   'Stop Instruction Decoder and Flush Composer'),
     Uinst_Descr('1111 0XX0 0001 XXXX', '1',   'Start Instruction Decoder'),
     Uinst_Descr('1111 0XX0 0010 XXXX', '1',   'Pop Bit Pointer Stack'),
@@ -66,7 +66,7 @@ uinst_descr = [
     Uinst_Descr('1111 0XX0 0111 XXXX', '1',   'Set Processor Fatal Condition Pin'),
     Uinst_Descr('1111 0XX0 1000 XXXX', '1',   'Restart Current Access Microinstruction'),
     Uinst_Descr('1111 0XX0 1001 XXCC', '1',   'Move Condition to Branch Flag'),
-    Uinst_Descr('1111 0XX0 1010 XXXX', '1',   'Return From Microsubroutine (one delay slot)'),
+    Uinst_Descr('1111 0XX0 1010 XXXX', '1',   'Return From Microsubroutine'), # one delay slot
     Uinst_Descr('1111 0XX0 1011 XXXX', '1',   'Set Trace Fault'), # encoding in patent conflicts with Access Destination
 
 #    Uinst_Descr('1111 0JJ0 1011 WVVV', '1',   'Access Destination'), # inst unit translates to Access Memory or Operand Stack Access
@@ -83,6 +83,10 @@ uinst_descr = [
 ]
 
 
+
+ui_decode = [None] * 65536
+
+uinst_info = [None] * len(uinst_descr)
 
 def parse_bits(bits_str):
     assert len(bits_str) == 19 and bits_str[4] == ' ' and bits_str[9] == ' ' and bits_str[14] == ' '
@@ -108,9 +112,20 @@ def parse_bits(bits_str):
     return Uinst_Info(const_mask, const_bits, dc_mask, fields)
 
 
-ui_decode = [None] * 65536
+def disassemble(opcode):
+    i = ui_decode[opcode]
+    fields = []
+    if i is None:
+        s = "unknown"
+    else:
+        s = uinst_descr[i].descr
+        for fc in uinst_info[i].fields:
+            pos, cnt = uinst_info[i].fields[fc]
+            val = (opcode >> pos) & ((1 << cnt) - 1)
+            fields += ['%c=0x%x' % (fc, val)]
+    return s,fields
 
-uinst_info = [None] * len(uinst_descr)
+
 
 for i in range(len(uinst_descr)):
     uinst_info[i] = parse_bits(uinst_descr[i].bits_str)
@@ -121,4 +136,55 @@ for i in range(len(uinst_descr)):
         if j & uinst_info[i].const_mask == uinst_info[i].const_bits:
             assert ui_decode[j] is None
             ui_decode[j] = i
+
+fn = 'ucode-dump.txt'
+with open(fn, 'r') as f:
+    ucode = [int(l.strip(),16) for l in f.readlines()]
+
+assert len(ucode) == 4096
+
+if False:
+    unk = { }
+    for i in range(len(ucode)):
+        ui = ucode[i]
+        di,fields = disassemble(ui)
+        if di == 'unknown':
+            if ui not in unk:
+                unk[ui] = 0
+            unk[ui] += 1
+
+    for o in sorted(unk.keys()):
+        print "%04x: %d" % (o, unk[o])
+
+space_after = [0] * 4096
+call_target_count = [0] * 4096
+branch_target_count = [0] * 4096
+cond_branch_target_count = [0] * 4096
+
+for i in range(len(ucode)):
+    di,fields = disassemble(ucode[i])
+    t = ucode[i] & 0xfff
+    if di == 'Call Microsubroutine':
+        call_target_count[t] += 1
+    elif di == 'Branch':
+        branch_target_count[t] += 1
+        space_after[i+1] += 1
+    elif di == 'Conditional Branch':
+        cond_branch_target_count[t] += 1
+    elif di == 'Return From Microsubroutine':
+        space_after[i+1] += 1
+        
+for i in range(len(ucode)):
+    di,fields = disassemble(ucode[i])
+    tflags = ''
+    if call_target_count[i] > 0:
+        tflags += 'S'
+    if branch_target_count[i] > 0:
+        tflags += 'B'
+    if cond_branch_target_count[i] > 0:
+        tflags += 'C'
+    print "%3s %04x: %04x %s %s" % (tflags, i, ucode[i], di, ','.join(fields))
+    if space_after[i] > 0:
+        print
+
 
