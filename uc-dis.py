@@ -69,8 +69,10 @@ uinst_descr = [
     Uinst_Descr('1111 0XX0 1010 XXXX', '1',   'Return From Microsubroutine'), # one delay slot
     Uinst_Descr('1111 0XX0 1011 XXXX', '1',   'Set Trace Fault'), # encoding in patent conflicts with Access Destination
 
-#    Uinst_Descr('1111 0JJ0 1011 WVVV', '1',   'Access Destination'), # inst unit translates to Access Memory or Operand Stack Access
+    Uinst_Descr('1111 0JJ0 1111 WVVV', '1',   'Access Destination'), # inst unit translates to Access Memory or Operand Stack Access
                                                           # encoding in patent conflicts with Set Trace Fault
+                                                          # this encoding is a guess
+
     Uinst_Descr('1111 1SS0 0000 XXXX', '3',   'Transfer Operator Fault Encoding'),
     Uinst_Descr('1111 1SS0 0001 0000', '3',   'Transfer Logical Address'),
     Uinst_Descr('1111 1SS0 0010 RRRR', '2',   'Transfer Data to Register'),
@@ -112,9 +114,56 @@ def parse_bits(bits_str):
     return Uinst_Info(const_mask, const_bits, dc_mask, fields)
 
 
+def dis_field_generic(fields, fc):
+    field = '%c=0x%x' % (fc, fields[fc])
+    return field
+
+def dis_field_r(fields, fc):
+    return 'reg=' + ['seg-sel-stack',
+                     'disp-stack',
+                     'ip-stack',
+                     'sp-stack',
+                     'exponent-stack',
+                     'fifo',
+                     'fault-encoding',
+                     'unknown7',
+                     'process-timer',
+                     'system-timer',
+                     'tempB',
+                     'on-chip-stack-count',
+                     'context-status',
+                     'processor-status',
+                     'process-status',
+                     'inst-seg-sel'][fields[fc]]
+
+def dis_field_t(fields, fc):
+    return 'type='+['char',
+                    'shortordinal',
+                    'ordinal',
+                    '16nonfaulting',
+                    '16flagsunchanged',
+                    'shortinteger',
+                    'integer',
+                    '16nonfaulting-carry'][fields[fc]]
+
+def dis_field_v(fields, fc):
+    return 'size='+str([8, 16, 32, 48, 64, 80, 'inst', 'segsel'][fields[fc]])
+
+def dis_field_w(fields, fc):
+    return ['read', 'write'][fields[fc]]
+
+dis_field_dispatch = { 'R' : dis_field_r,
+                       'T' : dis_field_t,
+                       'V' : dis_field_v,
+                       'W' : dis_field_w }
+
+def dis_field(fields, fc):
+    return dis_field_dispatch.get(fc, dis_field_generic)(fields, fc)
+
 def disassemble(opcode):
     i = ui_decode[opcode]
-    fields = []
+    fields = {}
+    fdis = []
     if i is None:
         s = "unknown"
     else:
@@ -122,8 +171,10 @@ def disassemble(opcode):
         for fc in uinst_info[i].fields:
             pos, cnt = uinst_info[i].fields[fc]
             val = (opcode >> pos) & ((1 << cnt) - 1)
-            fields += ['%c=0x%x' % (fc, val)]
-    return s,fields
+            fields[fc] = val
+        for fc in uinst_info[i].fields:
+            fdis += [dis_field(fields, fc)]
+    return s,fdis
 
 
 
@@ -179,7 +230,9 @@ for i in range(len(ucode)):
         add_target_ref(cond_branch_target_ref, t, i)
     elif di == 'Return From Microsubroutine':
         space_after[i+1] += 1
-        
+    elif di == 'End of Macro Instruction':
+        space_after[i] += 1
+
 for i in range(len(ucode)):
     di,fields = disassemble(ucode[i])
     tflags = ''
