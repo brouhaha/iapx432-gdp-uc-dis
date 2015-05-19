@@ -114,11 +114,65 @@ def parse_bits(bits_str):
     return Uinst_Info(const_mask, const_bits, dc_mask, fields)
 
 
-def dis_field_generic(fields, fc):
+def dis_field_generic(s, fields, fc):
     field = '%c=0x%x' % (fc, fields[fc])
     return field
 
-def dis_field_r(fields, fc):
+def dis_field_b(s, fields, fc):
+    return 'seg=' + ['entry-access-list',
+                     'public-access-list',
+                     'context',
+                     'private-access-list',
+                     'segment-table-dir',
+                     'processor',
+                     'disp-port',
+                     'process',
+                     'process-control',
+                     'context-control',
+                     'instruction',
+                     'operand-stack',
+                     'work-reg-A',
+                     'work-reg-B',
+                     'data-seg-cache',
+                     'seg-table-cache'][fields[fc]]
+
+def dis_field_f(s, fields, fc):
+    if s == 'Convert Flag to Boolean':
+        return 'flag=' + ['zero',
+                          'sign',
+                          'carry',
+                          'opaz',
+                          'sa',
+                          'nsign-and-nzero',
+                          'sign-and-nzero',
+                          'round',
+                          'guard',
+                          'greater-than-ordinal',
+                          'greater-than-integer',
+                          'greater-than-or-equal-integer',
+                          'equal-real',
+                          'greater-than-real',
+                          'greater-than-or-equal-real',
+                          'unkF'][fields[fc]]
+    else:  # Return Flag to Instruction Unit Branch Condition
+        return 'flag=' + ['zero',
+                          'sign',
+                          'carry',
+                          'opaz',
+                          'sa',
+                          'sa-xnor-sb',
+                          'opbz',
+                          'opaz-or-opbz',
+                          'prec-ctrl-24-or-53',
+                          'prec-ctrl-24',
+                          'sub-mag-zero-result',
+                          'lsb',
+                          'unnb-or-sign',
+                          'trace',
+                          'unkE',
+                          'unkF'][fields[fc]]
+
+def dis_field_r(s, fields, fc):
     return 'reg=' + ['seg-sel-stack',
                      'disp-stack',
                      'ip-stack',
@@ -136,7 +190,7 @@ def dis_field_r(fields, fc):
                      'process-status',
                      'inst-seg-sel'][fields[fc]]
 
-def dis_field_t(fields, fc):
+def dis_field_t(s, fields, fc):
     return 'type='+['char',
                     'shortordinal',
                     'ordinal',
@@ -146,19 +200,21 @@ def dis_field_t(fields, fc):
                     'integer',
                     '16nonfaulting-carry'][fields[fc]]
 
-def dis_field_v(fields, fc):
+def dis_field_v(s, fields, fc):
     return 'size='+str([8, 16, 32, 48, 64, 80, 'inst', 'segsel'][fields[fc]])
 
-def dis_field_w(fields, fc):
+def dis_field_w(s, fields, fc):
     return ['read', 'write'][fields[fc]]
 
-dis_field_dispatch = { 'R' : dis_field_r,
+dis_field_dispatch = { 'B' : dis_field_b,
+                       'F' : dis_field_f,
+                       'R' : dis_field_r,
                        'T' : dis_field_t,
                        'V' : dis_field_v,
                        'W' : dis_field_w }
 
-def dis_field(fields, fc):
-    return dis_field_dispatch.get(fc, dis_field_generic)(fields, fc)
+def dis_field(s, fields, fc):
+    return dis_field_dispatch.get(fc, dis_field_generic)(s, fields, fc)
 
 def disassemble(opcode):
     i = ui_decode[opcode]
@@ -173,7 +229,7 @@ def disassemble(opcode):
             val = (opcode >> pos) & ((1 << cnt) - 1)
             fields[fc] = val
         for fc in uinst_info[i].fields:
-            fdis += [dis_field(fields, fc)]
+            fdis += [dis_field(s, fields, fc)]
     return s,fdis
 
 
