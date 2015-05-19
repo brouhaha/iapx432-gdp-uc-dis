@@ -157,33 +157,42 @@ if False:
         print "%04x: %d" % (o, unk[o])
 
 space_after = [0] * 4096
-call_target_count = [0] * 4096
-branch_target_count = [0] * 4096
-cond_branch_target_count = [0] * 4096
+
+call_target_ref = {}
+branch_target_ref = {}
+cond_branch_target_ref = {}
+
+def add_target_ref(d, t, i):
+    if t not in d:
+        d[t] = set()
+    d[t].add(i)
 
 for i in range(len(ucode)):
     di,fields = disassemble(ucode[i])
     t = ucode[i] & 0xfff
     if di == 'Call Microsubroutine':
-        call_target_count[t] += 1
+        add_target_ref(call_target_ref, t, i)
     elif di == 'Branch':
-        branch_target_count[t] += 1
+        add_target_ref(branch_target_ref, t, i)
         space_after[i+1] += 1
     elif di == 'Conditional Branch':
-        cond_branch_target_count[t] += 1
+        add_target_ref(cond_branch_target_ref, t, i)
     elif di == 'Return From Microsubroutine':
         space_after[i+1] += 1
         
 for i in range(len(ucode)):
     di,fields = disassemble(ucode[i])
     tflags = ''
-    if call_target_count[i] > 0:
+    if i in call_target_ref:
         tflags += 'S'
-    if branch_target_count[i] > 0:
+        print '; called from: ' + ','.join(['%04x' % a for a in sorted(call_target_ref[i])])
+    if i in branch_target_ref:
         tflags += 'B'
-    if cond_branch_target_count[i] > 0:
+        print '; branched from: ' + ','.join(['%04x' % a for a in sorted(branch_target_ref[i])])
+    if i in cond_branch_target_ref:
         tflags += 'C'
-    print "%3s %04x: %04x %s %s" % (tflags, i, ucode[i], di, ','.join(fields))
+        print '; cond branched from: ' + ','.join(['%04x' % a for a in sorted(cond_branch_target_ref[i])])
+    print "%3s %04x: %04x %s %s" % (tflags, i, ucode[i], di, ', '.join(fields))
     if space_after[i] > 0:
         print
 
