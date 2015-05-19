@@ -136,6 +136,32 @@ def dis_field_b(s, fields, fc):
                      'data-seg-cache',
                      'seg-table-cache'][fields[fc]]
 
+def dis_field_c(s, fields, fc):
+    if s == 'Perform Operation':
+        return 'op=' + ['short-ord-mult',
+                        'short-int-mult',
+                        'ord-mult',
+                        'int-mult',
+                        'short-ord-div',
+                        'short-ord-rem',
+                        'short-int-div',
+                        'short-int-rem',
+                        'ord-div',
+                        'ord-rem',
+                        'int-div',
+                        'int-rem',
+                        '64-ord-div',
+                        '64-mod',
+                        '64-ord-mult',
+                        '64-square-root'][fields[fc]]
+    elif s == 'Move Condition to Branch Flag':
+        return 'cond=' + ['destination_stack_flag',
+                          'lookahead_mode',
+                          'ipc',
+                          'unk3'][fields[fc]]
+    else: # Conditionally Shift by Sixteen
+        return 'src=' + ['DEQA', 'DEQB'][fields[fc]]
+
 def dis_field_f(s, fields, fc):
     if s == 'Convert Flag to Boolean':
         return 'flag=' + ['zero',
@@ -172,6 +198,24 @@ def dis_field_f(s, fields, fc):
                           'unkE',
                           'unkF'][fields[fc]]
 
+def dis_field_l(s, fields, fc):
+    return 'op=' + ['zero',
+                    'not-a-and-not-b',
+                    'not-a-and-b',
+                    'not-a',
+                    'a-and-not-b',
+                    'not-b',
+                    'a-xor-b',
+                    'not-a-or-not-b',
+                    'a-and-b',
+                    'a-xnor-b',
+                    'b',
+                    'not-a-or-b',
+                    'a',
+                    'a-or-not-b',
+                    'a-or-b',
+                    'ones'][fields[fc]]
+
 def dis_field_r(s, fields, fc):
     return 'reg=' + ['seg-sel-stack',
                      'disp-stack',
@@ -207,7 +251,9 @@ def dis_field_w(s, fields, fc):
     return ['read', 'write'][fields[fc]]
 
 dis_field_dispatch = { 'B' : dis_field_b,
+                       'C' : dis_field_c,
                        'F' : dis_field_f,
+                       'L' : dis_field_l,
                        'R' : dis_field_r,
                        'T' : dis_field_t,
                        'V' : dis_field_v,
