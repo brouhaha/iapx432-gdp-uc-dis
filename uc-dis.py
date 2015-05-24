@@ -2,142 +2,6 @@
 import collections
 import string
 
-Uinst_Descr = collections.namedtuple('Uinst_Descr', ['bits_str', 'cycles_str', 'descr'])
-Uinst_Info = collections.namedtuple('Uinst_info', ['const_mask', 'const_bits', 'dont_care_mask', 'fields'])
-
-# Intel iAPX 432 General Data Processor Microinstruction encodings and descriptions
-# from US patent 4,325,120 "Data Processing System" section 11, pp. 106 ff.
-
-uinst_descr = [
-    Uinst_Descr('000M PJJQ WVVV BBBB', 'var', 'Access Memory'),
-
-    Uinst_Descr('0010 0010 W001 XXXX', 'var', 'Local Access'),
-    # 0010 0110 x001 1101 unknown
-
-    Uinst_Descr('0010 1JJQ WVVV MXXX', 'var', 'Access List Access'),
-
-    # 0011 1xx0 xxxx 1001 unknown
-    Uinst_Descr('0011 0XX0 0110 1010', 'var', 'Instruction Segment Read'),
-    Uinst_Descr('0011 1JJ0 WVVV 1011', 'var', 'Operand Stack Access'),
-
-    Uinst_Descr('0100 0SSD DTTT 0110', '2-3', 'Add'),
-    Uinst_Descr('0100 0SSD DTTT 1001', '2-3', 'Subtract'),
-    Uinst_Descr('0100 1SSD DTTT 0110', '2-3', 'Decrement'),
-    Uinst_Descr('0100 1SSD DTTT 1001', '2-3', 'Increment'),
-
-    Uinst_Descr('0101 0SSD DTTT XXX0', '2-3', 'Absolute Value'),
-    # 0101 0110 1011 0001 unknown
-    # 0101 01x0 1110 0001 unknown
-    # 0101 1x00 0001 1001 unknwon
-    # 0101 1x00 0010 1001 unknwon
-    # 0101 1x00 0100 1001 unknwon
-    # 0101 1x00 0111 1001 unknwon
-    # 0101 1110 0001 1001 unknwon
-    Uinst_Descr('0101 0SSD DTTT 1001', '2-3', 'Negate'),
-    Uinst_Descr('0101 1SSX X001 0110', '2',   'Add to Displacement Stack'),
-    Uinst_Descr('0101 1SSX X010 0110', '2',   'Add to IP Stack'),
-    Uinst_Descr('0101 1SSX X100 0110', '2',   'Add to Exponent Stack'),
-
-    Uinst_Descr('0110 0SSD DRJT AABB', '1',   'Extract'),
-    Uinst_Descr('0110 1SSD DTTT LLLL', '1-2', 'Logical Operation'),
-
-    Uinst_Descr('0111 0SSD DXXX XXXX', '2',   'Significant Bit'),
-    Uinst_Descr('0111 1SSD DVVV 0100', '2',   'Scale Displacement'),
-
-    Uinst_Descr('1000 0SS0 RRRR LLLL', '1',   'DEQ OP DEQ to Register'),
-    Uinst_Descr('1000 0DD1 RRRR LLLL', '1',   'OP DEQ to DEQ'),
-    Uinst_Descr('1000 1DDA AAAA LLLL', '1',   'ROM OP DEQ to DEQ'),
-
-    Uinst_Descr('1001 0SSF FFFI XXXX', '2',   'Return Flag to Instruction Unit Branch Condition'),
-    Uinst_Descr('1001 1DDF FFFI 0101', '2',   'Convert Flag to Boolean'),
-    Uinst_Descr('1010 0SS0 000K KKKK', '1',   'Move Constant to Displacement Stack'),
-    Uinst_Descr('1010 0SS0 001K KKKK', '1',   'Move Constant to Extractor Shift Count'),
-    # 1010 0000 010x 0000 unknown
-    Uinst_Descr('1010 0SS0 0110 XXXX', '1',   'Reset Execution Unit Fault State'),
-    Uinst_Descr('1010 0SS0 0111 XXXX', '1',   'Test Write Rights'),
-    Uinst_Descr('1010 0SS0 1000 XXXX', '1',   'Clear Operand Sign Bits'),
-    Uinst_Descr('1010 0SS0 1001 XXXX', '1',   'Exchange Flags'),
-    Uinst_Descr('1010 0SS0 1010 XXXX', '1',   'Invert SA'),
-    # 1010 0000 1011 0000 unknown
-    Uinst_Descr('1010 0SS0 1100 XXXX', '1',   'No Operation'),
-    # 1010 0000 1101 xxxx unknown
-    # 1010 0000 111x xxxx unknown
-    Uinst_Descr('1010 0SS1 0000 XXXX', '1',   'Invalidate Data Segment Cache Register'),
-    Uinst_Descr('1010 0SS1 0001 XXXX', '1',   'Invalidate Data Segment Cache Register Set'),
-    Uinst_Descr('1010 0SS1 0010 XXXX', '1',   'Invalidate Data Segment Cache'),
-    Uinst_Descr('1010 0SS1 0011 XXXX', '1',   'Invalidate Segment Table Cache'),
-    Uinst_Descr('1010 0SS1 010X XXXX', '1',   'Stop Process Timer'),
-    Uinst_Descr('1010 0SS1 011X XXXX', '1',   'Start Process Timer'),
-    Uinst_Descr('1010 0SS1 1000 BBBB', '1',   'Load Rights'),
-    Uinst_Descr('1010 0SS1 1001 BBBB', '1',   'Load Physical Address Lower'),
-    Uinst_Descr('1010 0SS1 1010 BBBB', '1',   'Load Physical Address Upper'),
-    Uinst_Descr('1010 0SS1 1011 BBBB', '1',   'Load Segment Length'),
-    Uinst_Descr('1010 0001 110C LLLL', '1',   'Conditionally Shift by Sixteen'),
-    Uinst_Descr('1010 0SS1 111U LLLL', '1',   'Move to Extractor Shift Count'),
-    Uinst_Descr('1010 1XXX XXXX CCCC', 'var', 'Perform Operation'),
-    Uinst_Descr('1011 0SSZ KKKK KKKK', '2',   'Test Segment Type'),
-    # 1011 1xxx xxxx xxxx unknown
-    Uinst_Descr('1100 AAAA AAAA AAAA', '1',   'Branch'), # one delay slot
-    Uinst_Descr('1101 AAAA AAAA AAAA', '1',   'Conditional Branch'), # one delay slot
-    Uinst_Descr('1110 AAAA AAAA AAAA', '1',   'Call Microsubroutine'), # one delay slot
-    Uinst_Descr('1111 0XX0 0000 XXXX', '1',   'Stop Instruction Decoder and Flush Composer'),
-    Uinst_Descr('1111 0XX0 0001 XXXX', '1',   'Start Instruction Decoder'),
-    Uinst_Descr('1111 0XX0 0010 XXXX', '1',   'Pop Bit Pointer Stack'),
-    Uinst_Descr('1111 0XX0 0011 XXXX', '1',   'Move TBIP to BIP'),
-    Uinst_Descr('1111 0XX0 0100 XXXX', '1',   'Move Bit Pointer Stack to XBUF'),
-    Uinst_Descr('1111 0XX0 0101 XXXX', '1',   'Set Invalid Class Fault'),
-    Uinst_Descr('1111 0XX0 0110 XXXX', '1',   'Issue IPC Function'),
-    Uinst_Descr('1111 0XX0 0111 XXXX', '1',   'Set Processor Fatal Condition Pin'),
-    Uinst_Descr('1111 0XX0 1000 XXXX', '1',   'Restart Current Access Microinstruction'),
-    Uinst_Descr('1111 0XX0 1001 XXCC', '1',   'Move Condition to Branch Flag'),
-    Uinst_Descr('1111 0XX0 1010 XXXX', '1',   'Return From Microsubroutine'), # one delay slot
-    Uinst_Descr('1111 0XX0 1011 XXXX', '1',   'Set Trace Fault'),
-    # 1111 x000 110x 0000 unknown
-    # 1111 1x00 1110 xxxx unknown
-    Uinst_Descr('1111 0JJ0 1111 WVVV', '1',   'Access Destination'), # inst unit translates to Access Memory or Operand Stack Access
-                                                          # encoding given in patent is wrong
-
-    Uinst_Descr('1111 1SS0 0000 XXXX', '3',   'Transfer Operator Fault Encoding'),
-    Uinst_Descr('1111 1SS0 0001 0000', '3',   'Transfer Logical Address'),
-    Uinst_Descr('1111 1SS0 0010 RRRR', '2',   'Transfer Data to Register'),
-    Uinst_Descr('1111 1SS0 0011 XXXX', '1',   'Set Lookahead Mode'),
-    Uinst_Descr('1111 1SS0 0100 XXXX', '1',   'Reset Processor'),
-    Uinst_Descr('1111 1SS0 0110 XXXX', '1',   'End of Branch Macro Instruction'),
-    Uinst_Descr('1111 1SS0 0111 XXXX', '1',   'End of Macro Instruction'),
-    Uinst_Descr('1111 1SS0 1001 XXXX', '1',   'Reset IP and Stack to Instruction Start'),
-    Uinst_Descr('1111 1SS0 1010 LLLL', '1',   'Transfer DEQ to BIP')
-]
-
-
-
-ui_decode = [None] * 65536
-
-uinst_info = [None] * len(uinst_descr)
-
-def parse_bits(bits_str):
-    assert len(bits_str) == 19 and bits_str[4] == ' ' and bits_str[9] == ' ' and bits_str[14] == ' '
-    bits_str = bits_str[0:4] + bits_str[5:9] + bits_str[10:14] + bits_str[15:19]
-    fields = { }
-    const_bits = 0
-    const_mask = 0
-    dc_mask = 0
-    for i in range(16):
-        c = bits_str[15-i] 
-        if c in '01':
-            const_bits += int(c) << i
-            const_mask += 1 << i
-        elif c == 'X':
-            dc_mask += 1 << i
-        else:
-            assert c in string.ascii_uppercase
-            if c not in fields:
-                fields[c] = [i, 1]
-            else:
-                assert i == fields[c][0] + fields[c][1]
-                fields[c][1] += 1
-    return Uinst_Info(const_mask, const_bits, dc_mask, fields)
-
-
 def dis_field_generic(s, fields, fc):
     field = '%c=0x%x' % (fc, fields[fc])
     return field
@@ -152,7 +16,7 @@ def dis_field_b(s, fields, fc):
                      'disp-port',
                      'process',
                      'process-control',
-                     'context-control',
+                     'context-control',  # not used in microcode ROM
                      'instruction',
                      'operand-stack',
                      'work-reg-A',
@@ -274,17 +138,165 @@ def dis_field_v(s, fields, fc):
 def dis_field_w(s, fields, fc):
     return ['read', 'write'][fields[fc]]
 
-dis_field_dispatch = { 'B' : dis_field_b,
-                       'C' : dis_field_c,
-                       'F' : dis_field_f,
-                       'L' : dis_field_l,
-                       'R' : dis_field_r,
-                       'T' : dis_field_t,
-                       'V' : dis_field_v,
-                       'W' : dis_field_w }
+default_field_dispatch = { 'B' : dis_field_b,
+                           'C' : dis_field_c,
+                           'F' : dis_field_f,
+                           'L' : dis_field_l,
+                           'R' : dis_field_r,
+                           'T' : dis_field_t,
+                           'V' : dis_field_v,
+                           'W' : dis_field_w }
 
-def dis_field(s, fields, fc):
-    return dis_field_dispatch.get(fc, dis_field_generic)(s, fields, fc)
+
+Uinst_Descr = collections.namedtuple('Uinst_Descr', ['bits_str', 'cycles_str', 'descr', 'field_decode'])
+Uinst_Info = collections.namedtuple('Uinst_info', ['const_mask', 'const_bits', 'dont_care_mask', 'fields'])
+
+# Intel iAPX 432 General Data Processor Microinstruction encodings and descriptions
+# from US patent 4,325,120 "Data Processing System" section 11, pp. 106 ff.
+
+uinst_descr = [
+    Uinst_Descr('000M PJJQ WVVV BBBB', 'var', 'Access Memory', None),
+
+    Uinst_Descr('0010 0010 W001 XXXX', 'var', 'Local Access', None),
+    # 0010 0110 x001 1101 unknown
+
+    Uinst_Descr('0010 1JJQ WVVV MXXX', 'var', 'Access List Access', None),
+
+    # 0011 1xx0 xxxx 1001 unknown
+    Uinst_Descr('0011 0XX0 0110 1010', 'var', 'Instruction Segment Read', None),
+    Uinst_Descr('0011 1JJ0 WVVV 1011', 'var', 'Operand Stack Access', None),
+
+    Uinst_Descr('0100 0SSD DTTT 0110', '2-3', 'Add', None),
+    Uinst_Descr('0100 0SSD DTTT 1001', '2-3', 'Subtract', None),
+    Uinst_Descr('0100 1SSD DTTT 0110', '2-3', 'Decrement', None),
+    Uinst_Descr('0100 1SSD DTTT 1001', '2-3', 'Increment', None),
+
+    Uinst_Descr('0101 0SSD DTTT XXX0', '2-3', 'Absolute Value', None),
+    # 0101 0110 1011 0001 unknown
+    # 0101 01x0 1110 0001 unknown
+    # 0101 1x00 0001 1001 unknown
+    # 0101 1x00 0010 1001 unknown
+    # 0101 1x00 0100 1001 unknown
+    # 0101 1x00 0111 1001 unknown
+    # 0101 1110 0001 1001 unknown
+    Uinst_Descr('0101 0SSD DTTT 1001', '2-3', 'Negate', None),
+    Uinst_Descr('0101 1SSX X001 0110', '2',   'Add to Displacement Stack', None),
+    Uinst_Descr('0101 1SSX X010 0110', '2',   'Add to IP Stack', None),
+    Uinst_Descr('0101 1SSX X100 0110', '2',   'Add to Exponent Stack', None),
+
+    Uinst_Descr('0110 0SSD DRJT AABB', '1',   'Extract', None),
+    Uinst_Descr('0110 1SSD DTTT LLLL', '1-2', 'Logical Operation', None),
+
+    Uinst_Descr('0111 0SSD DXXX XXXX', '2',   'Significant Bit', None),
+    Uinst_Descr('0111 1SSD DVVV 0100', '2',   'Scale Displacement', None),
+
+    Uinst_Descr('1000 0SS0 RRRR LLLL', '1',   'DEQ OP DEQ to Register', None),
+    Uinst_Descr('1000 0DD1 RRRR LLLL', '1',   'OP DEQ to DEQ', None),
+    Uinst_Descr('1000 1DDA AAAA LLLL', '1',   'ROM OP DEQ to DEQ', None),
+
+    Uinst_Descr('1001 0SSF FFFI XXXX', '2',   'Return Flag to Instruction Unit Branch Condition', None),
+    Uinst_Descr('1001 1DDF FFFI 0101', '2',   'Convert Flag to Boolean', None),
+    Uinst_Descr('1010 0SS0 000K KKKK', '1',   'Move Constant to Displacement Stack', None),
+    Uinst_Descr('1010 0SS0 001K KKKK', '1',   'Move Constant to Extractor Shift Count', None),
+    # 1010 0000 010x 0000 unknown
+    Uinst_Descr('1010 0SS0 0110 XXXX', '1',   'Reset Execution Unit Fault State', None),
+    Uinst_Descr('1010 0SS0 0111 XXXX', '1',   'Test Write Rights', None),
+    Uinst_Descr('1010 0SS0 1000 XXXX', '1',   'Clear Operand Sign Bits', None),
+    Uinst_Descr('1010 0SS0 1001 XXXX', '1',   'Exchange Flags', None),
+    Uinst_Descr('1010 0SS0 1010 XXXX', '1',   'Invert SA', None),
+    # 1010 0000 1011 0000 unknown
+    Uinst_Descr('1010 0SS0 1100 XXXX', '1',   'No Operation', None),
+    # 1010 0000 1101 xxxx unknown
+    # 1010 0000 111x xxxx unknown
+    Uinst_Descr('1010 0SS1 0000 XXXX', '1',   'Invalidate Data Segment Cache Register', None),
+    Uinst_Descr('1010 0SS1 0001 XXXX', '1',   'Invalidate Data Segment Cache Register Set', None),
+    Uinst_Descr('1010 0SS1 0010 XXXX', '1',   'Invalidate Data Segment Cache', None),
+    Uinst_Descr('1010 0SS1 0011 XXXX', '1',   'Invalidate Segment Table Cache', None),
+    Uinst_Descr('1010 0SS1 010X XXXX', '1',   'Stop Process Timer', None),
+    Uinst_Descr('1010 0SS1 011X XXXX', '1',   'Start Process Timer', None),
+
+    # I'm not convinced that the definition of Load Rights is correct. The only BBBB value
+    # seen in the microcode ROM dump is 2, context.
+    Uinst_Descr('1010 0SS1 1000 BBBB', '1',   'Load Rights', None),
+
+    # I'm not convinced that the definitions of Load Physical (either one) and Load Segment Length
+    # are correct. The only BBBB value seen in the microcode ROM dump is 0, entry-access-list.
+    Uinst_Descr('1010 0SS1 1001 BBBB', '1',   'Load Physical Address Lower', None),
+    Uinst_Descr('1010 0SS1 1010 BBBB', '1',   'Load Physical Address Upper', None),
+    Uinst_Descr('1010 0SS1 1011 BBBB', '1',   'Load Segment Length', None),
+
+    Uinst_Descr('1010 0001 110C LLLL', '1',   'Conditionally Shift by Sixteen', None),
+    Uinst_Descr('1010 0SS1 111U LLLL', '1',   'Move to Extractor Shift Count', None),
+    Uinst_Descr('1010 1XXX XXXX CCCC', 'var', 'Perform Operation', None),
+    Uinst_Descr('1011 0SSZ KKKK KKKK', '2',   'Test Segment Type', None),
+    # 1011 1xxx xxxx xxxx unknown
+    Uinst_Descr('1100 AAAA AAAA AAAA', '1',   'Branch', None), # one delay slot
+    Uinst_Descr('1101 AAAA AAAA AAAA', '1',   'Conditional Branch', None), # one delay slot
+    Uinst_Descr('1110 AAAA AAAA AAAA', '1',   'Call Microsubroutine', None), # one delay slot
+    Uinst_Descr('1111 0XX0 0000 XXXX', '1',   'Stop Instruction Decoder and Flush Composer', None),
+    Uinst_Descr('1111 0XX0 0001 XXXX', '1',   'Start Instruction Decoder', None),
+    Uinst_Descr('1111 0XX0 0010 XXXX', '1',   'Pop Bit Pointer Stack', None),
+    Uinst_Descr('1111 0XX0 0011 XXXX', '1',   'Move TBIP to BIP', None),
+    Uinst_Descr('1111 0XX0 0100 XXXX', '1',   'Move Bit Pointer Stack to XBUF', None),
+    Uinst_Descr('1111 0XX0 0101 XXXX', '1',   'Set Invalid Class Fault', None),
+    Uinst_Descr('1111 0XX0 0110 XXXX', '1',   'Issue IPC Function', None),
+    Uinst_Descr('1111 0XX0 0111 XXXX', '1',   'Set Processor Fatal Condition Pin', None),
+    Uinst_Descr('1111 0XX0 1000 XXXX', '1',   'Restart Current Access Microinstruction', None),
+    Uinst_Descr('1111 0XX0 1001 XXCC', '1',   'Move Condition to Branch Flag', None),
+    Uinst_Descr('1111 0XX0 1010 XXXX', '1',   'Return From Microsubroutine', None), # one delay slot
+    Uinst_Descr('1111 0XX0 1011 XXXX', '1',   'Set Trace Fault', None),
+    # 1111 x000 110x 0000 unknown
+    # 1111 1x00 1110 xxxx unknown
+    Uinst_Descr('1111 0JJ0 1111 WVVV', '1',   'Access Destination', None), # inst unit translates to Access Memory or Operand Stack Access
+                                                          # encoding given in patent is wrong
+
+    Uinst_Descr('1111 1SS0 0000 XXXX', '3',   'Transfer Operator Fault Encoding', None),
+    Uinst_Descr('1111 1SS0 0001 0000', '3',   'Transfer Logical Address', None),
+    Uinst_Descr('1111 1SS0 0010 RRRR', '2',   'Transfer Data to Register', None),
+    Uinst_Descr('1111 1SS0 0011 XXXX', '1',   'Set Lookahead Mode', None),
+    Uinst_Descr('1111 1SS0 0100 XXXX', '1',   'Reset Processor', None),
+    Uinst_Descr('1111 1SS0 0110 XXXX', '1',   'End of Branch Macro Instruction', None),
+    Uinst_Descr('1111 1SS0 0111 XXXX', '1',   'End of Macro Instruction', None),
+    Uinst_Descr('1111 1SS0 1001 XXXX', '1',   'Reset IP and Stack to Instruction Start', None),
+    Uinst_Descr('1111 1SS0 1010 LLLL', '1',   'Transfer DEQ to BIP', None)
+]
+
+
+
+ui_decode = [None] * 65536
+
+uinst_info = [None] * len(uinst_descr)
+
+def parse_bits(bits_str):
+    assert len(bits_str) == 19 and bits_str[4] == ' ' and bits_str[9] == ' ' and bits_str[14] == ' '
+    bits_str = bits_str[0:4] + bits_str[5:9] + bits_str[10:14] + bits_str[15:19]
+    fields = { }
+    const_bits = 0
+    const_mask = 0
+    dc_mask = 0
+    for i in range(16):
+        c = bits_str[15-i] 
+        if c in '01':
+            const_bits += int(c) << i
+            const_mask += 1 << i
+        elif c == 'X':
+            dc_mask += 1 << i
+        else:
+            assert c in string.ascii_uppercase
+            if c not in fields:
+                fields[c] = [i, 1]
+            else:
+                assert i == fields[c][0] + fields[c][1]
+                fields[c][1] += 1
+    return Uinst_Info(const_mask, const_bits, dc_mask, fields)
+
+
+def dis_field(s, descr, fields, fc):
+    if descr.field_decode and fc in descr.field_decode:
+        return descr.field_decode[fc](s, fields, fc)
+    return default_field_dispatch.get(fc, dis_field_generic)(s, fields, fc)
+
+
 
 def disassemble(opcode):
     i = ui_decode[opcode]
@@ -299,7 +311,7 @@ def disassemble(opcode):
             val = (opcode >> pos) & ((1 << cnt) - 1)
             fields[fc] = val
         for fc in uinst_info[i].fields:
-            fdis += [dis_field(s, fields, fc)]
+            fdis += [dis_field(s, uinst_descr[i], fields, fc)]
     return s,fdis
 
 
@@ -357,6 +369,8 @@ for i in range(len(ucode)):
     elif di == 'Return From Microsubroutine':
         space_after[i+1] += 1
     elif di == 'End of Macro Instruction':
+        space_after[i] += 1
+    elif di == 'End of Branch Macro Instruction':
         space_after[i] += 1
 
 for i in range(len(ucode)):
