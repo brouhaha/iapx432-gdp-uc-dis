@@ -1,4 +1,18 @@
 #!/usr/bin/python2
+
+# Copyright 2015 Eric Smith <spacewar@gmail.com>
+
+# Disassembler for Intel iAPX 432 General Data Processor
+# 43201 (instruction unit) microcode ROM.
+
+# Intel iAPX 432 General Data Processor Microinstruction encodings
+# and descriptions are from US patent 4,325,120 "Data Processing System"
+# section 11, pp. 106 ff.  The patent contains some errors and describes a
+# much earlier version of the architecture than the Release 1.0
+# components; while much the microinstruction set seems identical or
+# very similar to the descriptions in the patents, some aspects are
+# changed and the details are unknown.
+
 import collections
 import string
 
@@ -150,9 +164,6 @@ default_field_dispatch = { 'B' : dis_field_b,
 
 Uinst_Descr = collections.namedtuple('Uinst_Descr', ['bits_str', 'cycles_str', 'descr', 'field_decode'])
 Uinst_Info = collections.namedtuple('Uinst_info', ['const_mask', 'const_bits', 'dont_care_mask', 'fields'])
-
-# Intel iAPX 432 General Data Processor Microinstruction encodings and descriptions
-# from US patent 4,325,120 "Data Processing System" section 11, pp. 106 ff.
 
 uinst_descr = [
     Uinst_Descr('000M PJJQ WVVV BBBB', 'var', 'Access Memory', None),
