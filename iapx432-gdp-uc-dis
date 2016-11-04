@@ -1,6 +1,6 @@
-#!/usr/bin/python2
+#!/usr/bin/env python3
 
-# Copyright 2015 Eric Smith <spacewar@gmail.com>
+# Copyright 2015, 2016 Eric Smith <spacewar@gmail.com>
 
 # Disassembler for Intel iAPX 432 General Data Processor
 # 43201 (instruction unit) microcode ROM.
@@ -341,7 +341,7 @@ def disassemble(opcode):
 
 for i in range(len(uinst_descr)):
     uinst_info[i] = parse_bits(uinst_descr[i].bits_str)
-    #print uinst_descr[i].descr, "%04x" % uinst_info[i].const_mask, "%04x" % uinst_info[i].const_bits, uinst_info[i].fields
+    #print(uinst_descr[i].descr, "%04x" % uinst_info[i].const_mask, "%04x" % uinst_info[i].const_bits, uinst_info[i].fields)
     min = uinst_info[i].const_bits
     max = uinst_info[i].const_bits + (uinst_info[i].const_mask ^ 0xffff)
     for j in range(min, max+1):
@@ -366,7 +366,7 @@ if False:
             unk[ui] += 1
 
     for o in sorted(unk.keys()):
-        print "%04x: %d" % (o, unk[o])
+        print("%04x: %d" % (o, unk[o]))
 
 space_after = [0] * 4096
 
@@ -401,15 +401,14 @@ for i in range(len(ucode)):
     tflags = ''
     if i in call_target_ref:
         tflags += 'S'
-        print '; called from: ' + ','.join(['%04x' % a for a in sorted(call_target_ref[i])])
+        print('; called from: ' + ','.join(['%04x' % a for a in sorted(call_target_ref[i])]))
     if i in branch_target_ref:
         tflags += 'B'
-        print '; branched from: ' + ','.join(['%04x' % a for a in sorted(branch_target_ref[i])])
+        print('; branched from: ' + ','.join(['%04x' % a for a in sorted(branch_target_ref[i])]))
     if i in cond_branch_target_ref:
         tflags += 'C'
-        print '; cond branched from: ' + ','.join(['%04x' % a for a in sorted(cond_branch_target_ref[i])])
-    print "%3s %04x: %04x %s %s" % (tflags, i, ucode[i], di, ', '.join(fields))
+        print('; cond branched from: ' + ','.join(['%04x' % a for a in sorted(cond_branch_target_ref[i])]))
+    print("%3s %04x: %04x %s %s" % (tflags, i, ucode[i], di, ', '.join(fields)))
     if space_after[i] > 0:
-        print
-
+        print()
 
